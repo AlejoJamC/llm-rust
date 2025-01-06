@@ -7,6 +7,17 @@ impl Accumulator{
     fn new(sum:i32 ) -> Self{
         Self{sum}
     }
+
+    fn get(self) -> i32{
+        // access properties and methods of the struct
+        self.sum
+    }
+
+    fn add(mut self, increment: i32) -> Self{
+        Self {
+            sum: self.sum + increment
+        }
+    }
 }
 
 fn main() {
