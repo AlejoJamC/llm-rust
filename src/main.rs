@@ -4,8 +4,8 @@ struct Accumulator{
 }
 
 impl Accumulator{
-    fn new(init:i32 ) -> Accumulator{
-        Accumulator{sum: init}
+    fn new(sum:i32 ) -> Self{
+        Self{sum}
     }
 }
 
