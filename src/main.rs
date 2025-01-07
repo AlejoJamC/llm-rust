@@ -35,3 +35,8 @@ impl Accumulator{
     }
 }
 
+fn main(){
+    let acc = Accumulator::new(0);
+    let sum = Accumulator::add(0, 10);
+    println!("Sum: {}", sum);
+}
