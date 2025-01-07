@@ -13,15 +13,25 @@ impl Accumulator{
         self.sum
     }
 
-    fn add(mut self, increment: i32) -> Self{
-        Self {
-            sum: self.sum + increment
+    fn add(n1: i32, n2: i32) -> i32{
+        let mut sum = n1;
+        let (count, increment) = if n2 > 0 {(n2, 1)} else {(-n2, -1)};
+        let mut handles = vec![];
+
+        for _ in 0..count {
+            handles.push(
+                thread::spawn( || {
+                    sum += increment;
+                })
+            );
+            sum += increment;
         }
+
+        for handle in handles{
+            handle.join().unwrap();
+        }
+
+        sum
     }
 }
 
-fn main() {
-    let acc: Accumulator = Accumulator::new(0);
-
-    println!("acc = {:?}", acc);
-}
