@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct Config {
     pub ollama_url: String,
     pub default_model: String,

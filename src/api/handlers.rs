@@ -15,8 +15,8 @@ pub async fn start_load_test(
     
     let results = load_test_service.run_test(
         concurrent_users.into_inner(),
-        metrics.into_inner(),
-        should_stop.into_inner(),
+        metrics.get_ref().clone(),  // Using get_ref() to get the reference Arc 
+        should_stop.get_ref().clone(),
     )
     .await;
     

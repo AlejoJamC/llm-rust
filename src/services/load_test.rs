@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use tokio::time::{Duration, Instant};
+use futures::future;
 use crate::metrics::TestMetrics;
 use crate::models::request::OllamaRequest;
 use crate::models::response::TestResults;
@@ -20,50 +21,64 @@ impl LoadTestService {
         }
     }
 
+    async fn run_single_user(
+        ollama_service: OllamaService,
+        metrics: Arc<TestMetrics>,
+        should_stop: Arc<AtomicU64>,
+        config: Config,
+    ) {
+        while should_stop.load(Ordering::Relaxed) == 0 {
+            let start = Instant::now();
+            let request = OllamaRequest {
+                model: config.default_model.clone(),
+                prompt: "Tell me a short joke".to_string(),
+            };
+
+            match ollama_service.send_request(request).await {
+                Ok(_) => {
+                    let latency = start.elapsed().as_millis() as u64;
+                    metrics.update_metrics(latency);
+
+                    if latency > config.max_latency_threshold_ms {
+                        should_stop.store(1, Ordering::Relaxed);
+                        break;
+                    }
+                }
+                Err(_) => {
+                    metrics.increment_failed();
+                }
+            }
+
+            tokio::time::sleep(Duration::from_millis(config.request_interval_ms)).await;
+        }
+    }
+
     pub async fn run_test(
         &self,
         concurrent_users: usize,
         metrics: Arc<TestMetrics>,
         should_stop: Arc<AtomicU64>,
     ) -> TestResults {
-        let mut handles = Vec::new();
+        let mut handles = Vec::with_capacity(concurrent_users);
 
         for _ in 0..concurrent_users {
-            let metrics = metrics.clone();
-            let should_stop = should_stop.clone();
+            let metrics = Arc::clone(&metrics);
+            let should_stop = Arc::clone(&should_stop);
             let ollama_service = self.ollama_service.clone();
             let config = self.config.clone();
 
-            let handle = tokio::spawn(async move {
-                while should_stop.load(Ordering::Relaxed) == 0 {
-                    let start = Instant::now();
-                    let request = OllamaRequest {
-                        model: config.default_model.clone(),
-                        prompt: "Tell me a short joke".to_string(),
-                    };
-
-                    match ollama_service.send_request(request).await {
-                        Ok(_) => {
-                            let latency = start.elapsed().as_millis() as u64;
-                            metrics.update_metrics(latency);
-
-                            if latency > config.max_latency_threshold_ms {
-                                should_stop.store(1, Ordering::Relaxed);
-                                break;
-                            }
-                        }
-                        Err(_) => {
-                            metrics.increment_failed();
-                        }
-                    }
-
-                    tokio::time::sleep(Duration::from_millis(config.request_interval_ms)).await;
-                }
-            });
-            handles.push(handle);
+            handles.push(tokio::spawn(async move {
+                Self::run_single_user(
+                    ollama_service,
+                    metrics,
+                    should_stop,
+                    config,
+                ).await;
+            }));
         }
 
-        futures::future::join_all(handles).await;
+        // Wait for all users to complete
+        future::join_all(handles).await;
 
         self.calculate_results(&metrics)
     }

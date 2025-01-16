@@ -2,6 +2,7 @@ use reqwest::Client;
 use crate::models::request::OllamaRequest;
 use crate::config::Config;
 
+#[derive(Clone)]
 pub struct OllamaService {
     client: Client,
     config: Config,
