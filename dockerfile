@@ -1,15 +1,16 @@
-# Use the official PostgreSQL image as the base
-FROM postgres:15
+FROM rust:1.75 as builder
 
-# Install pgvector
-RUN apt-get update && apt-get install -y \
-    postgresql-server-dev-15 \
-    make gcc && \
-    rm -rf /var/lib/apt/lists/* && \
-    git clone --depth 1 https://github.com/pgvector/pgvector.git && \
-    cd pgvector && \
-    make && make install && \
-    cd .. && rm -rf pgvector
+WORKDIR /usr/src/app
+COPY . .
 
-# Expose the default PostgreSQL port
-EXPOSE 5432
+# Install build dependencies
+RUN cargo build --release
+
+# Runtime stage
+FROM debian:bullseye-slim
+COPY --from=builder /usr/src/app/target/release/llm-rust /usr/local/bin/
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
+
+CMD ["llm-rust"]
