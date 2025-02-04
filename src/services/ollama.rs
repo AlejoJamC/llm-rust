@@ -1,27 +1,28 @@
 use reqwest::Client;
+use serde::{Deserialize, Serialize};
 use crate::models::request::OllamaRequest;
-use crate::config::Config;
+use crate::models::response::OllamaResponse;
 
-#[derive(Clone)]
 pub struct OllamaService {
     client: Client,
-    config: Config,
+    ollama_url: String,
 }
 
 impl OllamaService {
-    pub fn new(config: Config) -> Self {
+    pub fn new() -> Self {
         Self {
             client: Client::new(),
-            config,
+            ollama_url: "http://localhost:11434/api/generate".to_string(),
         }
     }
 
-    pub async fn send_request(&self, payload: OllamaRequest) -> Result<(), reqwest::Error> {
-        self.client
-            .post(&self.config.ollama_url)
-            .json(&payload)
+    pub async fn send_prompt(&self, request: OllamaRequest) -> Result<OllamaResponse, reqwest::Error> {
+        let response = self.client
+            .post(&self.ollama_url)
+            .json(&request)
             .send()
             .await?;
-        Ok(())
+
+        response.json::<OllamaResponse>().await
     }
 }
