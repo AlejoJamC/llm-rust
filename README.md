@@ -48,3 +48,9 @@ CREATE EXTENSION vector;
 \dx
 ````
 
+New curl command to query ollama.
+````
+curl -X POST http://localhost:8080/query-ollama \
+-H "Content-Type: application/json" \
+-d '{"prompt": "¿Qué es Rust?"}'
+````
