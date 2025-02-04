@@ -58,7 +58,9 @@ pub async fn query_ollama(prompt: web::Json<PromptRequest>) -> HttpResponse {
             if resp.status().is_success() {
                 // Parsear la respuesta JSON de Ollama
                 let ollama_response: OllamaResponse = resp.json().await.unwrap_or_else(|_| OllamaResponse { 
-                    response: "Error parsing response".to_string() 
+                    response: "Error parsing response".to_string(),
+                    model: "unknown".to_string(),
+                    created_at: "unknown".to_string(),
                 });
                 HttpResponse::Ok().json(ollama_response)
             } else {
